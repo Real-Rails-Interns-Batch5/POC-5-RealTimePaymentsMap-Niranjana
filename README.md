@@ -18,21 +18,29 @@ Built on a modern, decoupled full-stack architecture to maintain isolated execut
 
 ### 1. Clone the repository and navigate into the project folder
 git clone https://github.com/Real-Rails-Interns-Batch5/POC-5-RealTimePaymentsMap-Niranjana.git
+
 cd POC-5-RealTimePaymentsMap-Niranjana
 
 ### 2. Setup & Start the Backend (FastAPI)
 cd backend
+
 python -m venv venv
+
  On Windows execution policy:
 .\venv\Scripts\Activate.ps1
+
  On macOS/Linux execution policy: source venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000 &
+
+uvicorn main:app --reload --port 8000 
 
 ### 3. Setup & Start the Frontend (Next.js)
  (Open a separate terminal window or tab first, then run):
+ 
 cd ../frontend
+
 npm install
+
 npm run dev
 
 ## AI Usage Summary
