@@ -1,77 +1,77 @@
 "use client";
 
-import React from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-// Reset default Leaflet icon paths to prevent asset resolution breakages during compilation loops
-const DefaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+// Fix for missing marker graphics in Next.js builds
+const customMarkerIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
-L.Marker.prototype.options.icon = DefaultIcon;
 
-// Internal utility helper to animate camera pans automatically when a selected rail shifts
-function RecenterMap({ coordinates }: { coordinates: [number, number] }) {
-  const map = useMap();
-  if (coordinates) {
-    map.setView(coordinates, 4, { animate: true });
-  }
+// Dynamic Pan Controller Component: Responsively glides view to active payment hub
+function MapPanController({ centerCoordinates }: { centerCoordinates: [number, number] }) {
+  const mapInstance = useMap();
+  
+  useEffect(() => {
+    if (centerCoordinates) {
+      mapInstance.setView(centerCoordinates, mapInstance.getZoom());
+      setTimeout(() => {
+        mapInstance.invalidateSize();
+      }, 100);
+    }
+  }, [centerCoordinates, mapInstance]);
+
   return null;
 }
 
-export default function MapComponent(props: any) {
-  // Gracefully read both property naming bounds and default safely to an empty array
-  const systems = props.railsData || props.systems || [];
-  const activeRail = props.activeRail;
+export default function MapComponent({ rails, activeRailId }: { rails: any[]; activeRailId: string }) {
   
-  const defaultCenter: [number, number] = [20.0, 0.0];
+  // 🎯 CRITICAL GUARD: If the backend data array hasn't loaded yet, stop rendering to prevent appendChild crashes
+  if (!rails || rails.length === 0) {
+    return (
+      <div className="w-full h-full min-h-screen flex items-center justify-center bg-[#0B111E] text-zinc-500 font-mono text-xs">
+        Connecting to data streams...
+      </div>
+    );
+  }
+
+  // Safe Extraction: Data is guaranteed to exist now
+  const activeRailNode = rails.find((r) => r.id === activeRailId) || rails[0];
+  const defaultPosition: [number, number] = activeRailNode && activeRailNode.coordinates 
+    ? activeRailNode.coordinates 
+    : [20.5937, 78.9629]; // Safe baseline center fallback
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full min-h-screen relative bg-[#0B111E]">
       <MapContainer
-        center={activeRail?.coordinates || defaultCenter}
-        zoom={2}
-        className="h-full w-full"
-        style={{ background: "#0B111E" }}
+        center={defaultPosition}
+        zoom={3}
+        scrollWheelZoom={true}
+        dragging={true}
+        style={{ height: "100vh", width: "100%" }}
+        className="z-10"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
-        {activeRail?.coordinates && (
-          <RecenterMap coordinates={activeRail.coordinates} />
-        )}
+        <MapPanController centerCoordinates={defaultPosition} />
 
-        {systems.map((system: any) => {
-          const lat = system.coordinates?.[0] || system.latitude;
-          const lng = system.coordinates?.[1] || system.longitude;
-
-          if (!lat || !lng) return null;
-
+        {rails.map((rail: any) => {
+          if (!rail.coordinates) return null;
           return (
-            <Marker 
-              key={system.id} 
-              position={[lat, lng]}
-              eventHandlers={{
-                click: () => {
-                  if (props.onMarkerClick) {
-                    props.onMarkerClick(system);
-                  }
-                },
-              }}
-            >
-              <Popup>
-                <div className="text-slate-900 p-1 font-sans">
-                  <strong className="block text-sm font-black">{system.name}</strong>
-                  <span className="text-[11px] text-slate-500 font-medium">{system.region}</span>
-                </div>
-              </Popup>
-            </Marker>
+            <Marker
+              key={rail.id}
+              position={rail.coordinates as [number, number]}
+              icon={customMarkerIcon}
+            />
           );
         })}
       </MapContainer>

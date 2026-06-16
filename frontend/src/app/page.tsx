@@ -1,177 +1,162 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
+import "leaflet/dist/leaflet.css";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
-// Asynchronously wrap Leaflet container component to prevent SSR compilation shifts or crashes
-const MapComponent = dynamic(() => import("./components/MapComponent"), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-[#0B111E] flex items-center justify-center text-slate-400 font-medium">Loading Mapping Canvas Engine...</div>
-});
-
-interface RailData {
-  id: string;
-  name: string;
-  region: string;
-  country_code: string;
-  efficiency: string;
-  integrity: string;
-  volume_trend: string;
-  why_this_matters: string;
-  who_controls: string;
-  coordinates: [number, number];
-  launch_year: string;
-}
+// Loads Map component safely only on client-side context to protect appendChild hooks
+const MapComponent = dynamic(
+  () => import("./components/MapComponent"),
+  { 
+    ssr: false,
+    loading: () => <div className="h-full w-full flex items-center justify-center bg-zinc-900 text-zinc-500 font-mono text-sm">Hydrating Mapping Architecture Viewport...</div>
+  }
+);
 
 export default function DashboardPage() {
-  const [rails, setRails] = useState<RailData[]>([]);
-  const [selectedRail, setSelectedRail] = useState<RailData | null>(null);
+  const [rails, setRails] = useState([]);
+  const [activeNode, setActiveNode] = useState<any>(null);
 
+  // Hydrate platform array datasets upon initialization
   useEffect(() => {
-    // Synchronize telemetry records directly from our local FastAPI layer endpoint
     fetch("http://127.0.0.1:8000/api/v1/rails")
       .then((res) => res.json())
       .then((data) => {
         setRails(data);
-        if (data.length > 0) setSelectedRail(data[0]); // Default focus on load
+        if (data && data.length > 0) {
+          // Default selection fallback tracking match to video
+          const defaultTarget = data.find((r: any) => r.id === "fednow") || data[0];
+          setActiveNode(defaultTarget);
+        }
       })
-      .catch((err) => console.error("Telemetry link synchronization error:", err));
+      .catch((err) => console.error("Error communicating with dynamic backend service layer:", err));
   }, []);
 
-  const handleDownload = () => {
-    if (!selectedRail) return;
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedRail, null, 2));
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `${selectedRail.id}_metrics_export.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+  // Triggers dynamic data package assembly and saves structural file down seamlessly
+  const handlePackageDownload = (targetId: string, name: string) => {
+    fetch(`http://127.0.0.1:8000/api/v1/rails/download/${targetId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const jsonContentString = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([jsonContentString], { type: "application/json" });
+        const URLInstance = window.URL.createObjectURL(dataBlob);
+        
+        const transientLinkElement = document.createElement("a");
+        transientLinkElement.href = URLInstance;
+        transientLinkElement.download = `${targetId}_metrics_export.json`;
+        document.body.appendChild(transientLinkElement);
+        transientLinkElement.click();
+        
+        // Garbage collection cleaning cycle
+        document.body.removeChild(transientLinkElement);
+        window.URL.revokeObjectURL(URLInstance);
+      })
+      .catch((err) => console.error("Download pipeline failed:", err));
   };
 
+  if (!activeNode) return <div className="h-screen w-screen bg-[#0B111E]" />;
+
   return (
-    <div className="flex h-screen w-full bg-[#0B111E] text-slate-100 font-sans overflow-hidden">
+    <main className="flex h-screen w-screen bg-[#0B111E] overflow-hidden text-white font-sans relative select-none">
       
-      {/* 🌲 STAGE A — THE 70% MAIN WORKSPACE STAGE: GEOSPATIAL MAP (LEFT SIDE) */}
-      <div className="w-[70%] h-full relative border-r border-slate-800">
-        <MapComponent 
-          railsData={rails} 
-          activeRail={selectedRail} 
-          onMarkerClick={(rail: RailData) => setSelectedRail(rail)} 
-        />
-        
-        {/* ADOPTION FILTERS FEATURE: Floating Navigation layer for camera viewport adjustments */}
-        <div className="absolute top-4 left-4 z-[1000] flex space-x-2 bg-[#0F172A]/90 p-1.5 rounded-xl border border-slate-700 backdrop-blur-md shadow-2xl">
-          {rails.map((rail) => (
-            <button
-              key={rail.id}
-              onClick={() => setSelectedRail(rail)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                selectedRail?.id === rail.id 
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20" 
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
-              }`}
-            >
-              {rail.name}
-            </button>
-          ))}
-        </div>
+      {/* Absolute Quick Navigation Bar Component Layer */}
+      <div className="absolute top-4 left-4 z-[1000] flex gap-2 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg border border-zinc-800/60">
+        {rails.map((node: any) => (
+          <button
+            key={node.id}
+            onClick={() => setActiveNode(node)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+              activeNode.id === node.id 
+                ? "bg-blue-600 text-white shadow-md" 
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+            }`}
+          >
+            {node.name}
+          </button>
+        ))}
       </div>
 
-      {/* 🌲 STAGE B — THE 30% CONTROL PANEL STAGE: ANALYTICS SIDEBAR (RIGHT SIDE) */}
-      <div className="w-[30%] h-full bg-[#0F172A] p-6 flex flex-col justify-between border-l border-slate-800 shadow-2xl z-10">
-        
-        <div className="space-y-6 overflow-y-auto pr-1">
+      {/* 70% Geospatial Visualization Theater View */}
+      <section className="w-[70%] h-full relative">
+        <MapComponent rails={rails} activeRailId={activeNode.id} onSelectRail={(node: any) => setActiveNode(node)} />
+      </section>
+
+      {/* 30% Control Studio Information Side-Drawer Matrix */}
+      <section className="w-[30%] h-full bg-[#0B0F19] p-8 flex flex-col justify-between overflow-y-auto border-l border-zinc-900">
+        <div className="space-y-6">
           <div>
-            <span className="text-[10px] uppercase tracking-widest text-blue-500 font-extrabold">Network Intelligence Workspace</span>
-            <h1 className="text-xl font-black text-white mt-0.5">RealRails Control Studio</h1>
+            <p className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">Network Intelligence Workspace</p>
+            <h1 className="text-2xl font-black text-white tracking-tight mt-0.5">RealRails Control Studio</h1>
           </div>
 
-          {selectedRail ? (
-            <div className="space-y-5">
-              {/* Header Title Section */}
-              <div className="border-b border-slate-800 pb-3">
-                <h2 className="text-2xl font-black text-white tracking-tight">{selectedRail.name}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Clearing Network Identifier: <span className="text-slate-200 font-semibold">{selectedRail.id.toUpperCase()}</span></p>
-              </div>
+          <div className="space-y-1">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white">{activeNode.name}</h2>
+            <p className="text-xs font-mono text-zinc-500">Clearing Network Identifier: <span className="text-blue-400 uppercase font-bold">{activeNode.id}</span></p>
+          </div>
 
-              {/* COUNTRY CARDS FEATURE */}
-              <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl p-4 shadow-md">
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 bg-blue-600/20 text-blue-400 rounded-lg flex items-center justify-center font-black text-sm border border-blue-500/30">
-                    {selectedRail.country_code}
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 block font-bold uppercase tracking-wider">Region Anchor Profile</span>
-                    <h3 className="text-sm font-bold text-white">{selectedRail.region}</h3>
-                  </div>
-                </div>
+          <div className="bg-zinc-950/40 rounded-xl p-4 border border-zinc-900/80 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-10 bg-blue-950/50 border border-blue-900/60 rounded-lg flex items-center justify-center font-black text-sm text-blue-400 tracking-wider">
+                {activeNode.country_code}
               </div>
-
-              {/* SCHEME METADATA FEATURE — Core Performance Grid */}
-              <div className="grid grid-cols-1 gap-2.5">
-                <div className="bg-[#1E293B]/60 border border-slate-800 p-3 rounded-lg">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Settlement Efficiency</span>
-                  <p className="text-xs font-bold text-emerald-400 mt-0.5">{selectedRail.efficiency}</p>
-                </div>
-                <div className="bg-[#1E293B]/60 border border-slate-800 p-3 rounded-lg">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Operation Integrity</span>
-                  <p className="text-xs font-bold text-slate-200 mt-0.5">{selectedRail.integrity}</p>
-                </div>
-                <div className="bg-[#1E293B]/60 border border-slate-800 p-3 rounded-lg">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Volume Metric Trend</span>
-                  <p className="text-xs font-bold text-blue-400 mt-0.5">{selectedRail.volume_trend}</p>
-                </div>
-              </div>
-
-              {/* TIMELINE OF LAUNCHES FEATURE */}
-              <div className="bg-[#1E293B]/40 border border-slate-800 p-4 rounded-xl">
-                <h3 className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-3">Timeline of Infrastructure Launches</h3>
-                <div className="relative border-l-2 border-slate-700 pl-4 space-y-4 text-xs">
-                  <div className="relative">
-                    <div className={`absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full transition-all ${selectedRail.id === 'upi' ? 'bg-blue-500 ring-4 ring-blue-500/20 scale-110' : 'bg-slate-600'}`} />
-                    <span className="font-bold text-slate-400">2016</span> — <span className={selectedRail.id === 'upi' ? 'text-white font-bold' : 'text-slate-400'}>UPI Network Launch (India)</span>
-                  </div>
-                  <div className="relative">
-                    <div className={`absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full transition-all ${selectedRail.id === 'sepa' ? 'bg-blue-500 ring-4 ring-blue-500/20 scale-110' : 'bg-slate-600'}`} />
-                    <span className="font-bold text-slate-400">2017</span> — <span className={selectedRail.id === 'sepa' ? 'text-white font-bold' : 'text-slate-400'}>SEPA Instant Deployment (Eurozone)</span>
-                  </div>
-                  <div className="relative">
-                    <div className={`absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full transition-all ${selectedRail.id === 'fednow' ? 'bg-blue-500 ring-4 ring-blue-500/20 scale-110' : 'bg-slate-600'}`} />
-                    <span className="font-bold text-slate-400">2023</span> — <span className={selectedRail.id === 'fednow' ? 'text-white font-bold' : 'text-slate-400'}>FedNow System Go-Live (USA)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Strategic Insights Blocks */}
-              <div className="bg-[#1E293B] border border-slate-800 p-4 rounded-xl space-y-3.5 shadow-inner">
-                <div>
-                  <h3 className="text-[10px] font-bold text-blue-400 tracking-wider uppercase">WHY THIS MATTERS</h3>
-                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">{selectedRail.why_this_matters}</p>
-                </div>
-                <div className="border-t border-slate-800 pt-3">
-                  <h3 className="text-[10px] font-bold text-blue-400 tracking-wider uppercase">WHO CONTROLS THE RAIL</h3>
-                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">{selectedRail.who_controls}</p>
-                </div>
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Region Anchor Profile</p>
+                <p className="text-sm font-bold text-zinc-200">{activeNode.region}</p>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12 text-slate-500 text-xs">Select a clearing network hub link to intercept stream data telemetry.</div>
-          )}
+
+            <div className="grid grid-cols-1 gap-3 pt-2 border-t border-zinc-900">
+              <div>
+                <p className="text-[10px] uppercase font-bold text-zinc-500">Settlement Efficiency</p>
+                <p className="text-sm font-semibold text-emerald-400">{activeNode.efficiency}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-bold text-zinc-500">Operation Integrity</p>
+                <p className="text-sm font-semibold text-zinc-300">{activeNode.integrity}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-bold text-zinc-500">Volume Metric Trend</p>
+                <p className="text-sm font-semibold text-blue-400">{activeNode.volume_trend}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Timeline of Infrastructure Launches</p>
+            <div className="space-y-2 font-mono text-xs">
+              <div className={`flex items-center gap-3 p-1.5 rounded ${activeNode.id === 'upi' ? 'bg-blue-950/20 text-blue-400' : 'text-zinc-500'}`}>
+                <span className="font-bold">2016</span> <span>• UPI Network Launch (India)</span>
+              </div>
+              <div className={`flex items-center gap-3 p-1.5 rounded ${activeNode.id === 'sepa' ? 'bg-blue-950/20 text-blue-400' : 'text-zinc-500'}`}>
+                <span className="font-bold">2017</span> <span>• SEPA Instant Deployment (Eurozone)</span>
+              </div>
+              <div className={`flex items-center gap-3 p-1.5 rounded ${activeNode.id === 'fednow' ? 'bg-blue-950/20 text-blue-400' : 'text-zinc-500'}`}>
+                <span className="font-bold">2023</span> <span>• FedNow System Go-Live (USA)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-900 pt-4 space-y-3">
+            <div>
+              <p className="text-[10px] uppercase font-bold text-zinc-500">Why This Matters</p>
+              <p className="text-xs text-zinc-400 leading-relaxed mt-0.5">{activeNode.why_this_matters}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-zinc-500">Who Controls the Rail</p>
+              <p className="text-xs text-zinc-300 font-medium mt-0.5">{activeNode.who_controls}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Download Action Action Button Container */}
-        <div className="pt-4 border-t border-slate-800 bg-[#0F172A]">
-          <button 
-            onClick={handleDownload}
-            disabled={!selectedRail}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-800 disabled:text-slate-600 text-white text-xs font-bold py-3 px-4 rounded-xl transition-all shadow-lg active:scale-[0.99]"
+        {/* Dynamic Action Trigger Hook */}
+        <div className="pt-6 border-t border-zinc-900 mt-6">
+          <button
+            onClick={() => handlePackageDownload(activeNode.id, activeNode.name)}
+            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs py-3 px-4 rounded-lg transition-all shadow-lg tracking-wide uppercase"
           >
             Download Sample Data
           </button>
         </div>
-
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
