@@ -1,11 +1,4 @@
 {
-  "metadata": {
-    "classification": "SYNTHETIC_DATASET",
-    "legal_notice": "CRITICAL NOTICE: Every record inside this array is algorithmically simulated and entirely synthetic.",
-    "generated_at": "2026-06-18T20:30:00Z",
-    "project_id": "POC-5",
-    "total_records": 3
-  },
   "records": [
     {
       "id": "fednow",
