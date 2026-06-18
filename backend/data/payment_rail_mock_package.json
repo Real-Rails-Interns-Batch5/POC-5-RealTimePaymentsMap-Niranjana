@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "classification": "SYNTHETIC_DATASET",
+    "legal_notice": "CRITICAL NOTICE: Every record inside this array is algorithmically simulated and entirely synthetic.",
+    "generated_at": "2026-06-18T20:30:00Z",
+    "project_id": "POC-5",
+    "total_records": 3
+  },
+  "records": [
+    {
+      "id": "fednow",
+      "name": "FedNow",
+      "region": "United States",
+      "country_code": "US",
+      "efficiency": "Instant (< 2 seconds)",
+      "integrity": "24/7/365 continuous uptime",
+      "volume_trend": "Exponential growth stage",
+      "why_this_matters": "Provides immediate interbank settlement across the US.",
+      "who_controls": "The Federal Reserve System",
+      "coordinates": [37.0902, -95.7129],
+      "launch_year": "2023",
+      "is_synthetic": true
+    },
+    {
+      "id": "sepa",
+      "name": "SEPA Instant Credit Transfer",
+      "region": "Eurozone",
+      "country_code": "EU",
+      "efficiency": "Instant (< 10 seconds)",
+      "integrity": "99.99% operational reliability",
+      "volume_trend": "High / Stable adoption",
+      "why_this_matters": "Unifies cross-border Euro transactions.",
+      "who_controls": "The European Payments Council",
+      "coordinates": [48.5667, 13.4333],
+      "launch_year": "2017",
+      "is_synthetic": true
+    },
+    {
+      "id": "upi",
+      "name": "UPI (Unified Payments Interface)",
+      "region": "India",
+      "country_code": "IN",
+      "efficiency": "Real-time instant settlement",
+      "integrity": "High-throughput fault-tolerant matrix",
+      "volume_trend": "World-leading transaction velocity",
+      "why_this_matters": "Drives massive retail financial inclusion.",
+      "who_controls": "National Payments Corporation of India",
+      "coordinates": [20.5937, 78.9629],
+      "launch_year": "2016",
+      "is_synthetic": true
+    }
+  ]
+}
